@@ -36,9 +36,9 @@ def send_otp(input_value, mode):
 # Admin registration & login
 def admin_login():
     st.header("Admin Login")
-    mode = st.radio("Login via", ["Mobile Number", "Email"])
-    input_value = st.text_input("Enter contact value")
-    if st.button("Send OTP (Admin)"):
+    mode = st.radio("Login via", ["Mobile Number", "Email"], key="admin_mode")
+    input_value = st.text_input("Enter contact value", key="admin_contact")
+    if st.button("Send OTP (Admin)", key="send_otp_admin"):
         send_otp(input_value, mode)
         st.session_state["admin_logged_in"] = True
     if st.session_state.get("admin_logged_in"):
@@ -49,10 +49,10 @@ def admin_dashboard():
 
     # 1. User registration (by admin)
     st.subheader("Register New User")
-    first_name = st.text_input("First Name (Admin)")
-    last_name = st.text_input("Last Name (Admin)")
-    age = st.number_input("Age (Admin)", min_value=1, max_value=120)
-    if st.button("Create User"):
+    first_name = st.text_input("First Name (Admin)", key="reg_first_name_admin")
+    last_name = st.text_input("Last Name (Admin)", key="reg_last_name_admin")
+    age = st.number_input("Age (Admin)", min_value=1, max_value=120, key="reg_age_admin")
+    if st.button("Create User", key="create_user_admin"):
         db.users.insert_one({"first_name": first_name, "last_name": last_name, "age": age, "created_by": "admin"})
         st.success("User created!")
     
@@ -60,16 +60,16 @@ def admin_dashboard():
     st.subheader("Manage Products")
     col1, col2 = st.columns(2)
     with col1:
-        prod_name = st.text_input("Flavour/Product Name")
-        price = st.number_input("Price (₹)", min_value=1)
-        qty = st.number_input("Total Qty", min_value=1)
-        if st.button("Add Product"):
+        prod_name = st.text_input("Flavour/Product Name", key="admin_prod_name")
+        price = st.number_input("Price (₹)", min_value=1, key="admin_prod_price")
+        qty = st.number_input("Total Qty", min_value=1, key="admin_prod_qty")
+        if st.button("Add Product", key="add_product_admin"):
             db.products.insert_one({"name": prod_name, "price": price, "total_qty": qty, "remaining_qty": qty, "daily_sale": 0, "likes": 0, "added_on": datetime.now()})
             st.success("Product added!")
 
     with col2:
-        remove_prod = st.text_input("Product name to remove")
-        if st.button("Remove Product"):
+        remove_prod = st.text_input("Product name to remove", key="admin_remove_prod")
+        if st.button("Remove Product", key="remove_product_admin"):
             db.products.delete_one({"name": remove_prod})
             st.warning("Product removed!")
     
@@ -83,7 +83,7 @@ def admin_dashboard():
             f"**Most Sold:** {fav_sell['name']} ({fav_sell['daily_sale']} sold) :star:  \n"
             f"**Most Liked:** {fav_like['name']} ({fav_like['likes']} likes) :heart:"
         )
-        for p in products:
+        for idx, p in enumerate(products):
             st.write(
                 f"Flavor: {p['name']} | Total Qty: {p['total_qty']} | Remaining: {p['remaining_qty']} | Price: ₹{p['price']} "
                 f"| Daily Sale: {p['daily_sale']} | {'🔥' if p['name'] == fav_sell['name'] else ''}{'❤️' if p['name'] == fav_like['name'] else ''}"
@@ -97,9 +97,9 @@ def admin_dashboard():
 # User registration & login
 def user_login():
     st.header("User Registration/Login")
-    mode = st.radio("Login/Register via", ["Mobile Number", "Email"])
-    input_value = st.text_input("Enter contact value (User)")
-    if st.button("Send OTP (User)"):
+    mode = st.radio("Login/Register via", ["Mobile Number", "Email"], key="user_mode")
+    input_value = st.text_input("Enter contact value (User)", key="user_contact")
+    if st.button("Send OTP (User)", key="send_otp_user"):
         send_otp(input_value, mode)
         st.session_state["user_logged_in"] = True
     
@@ -111,11 +111,11 @@ def user_dashboard(user_contact):
     st.subheader("Your Details")
     if not db.users.find_one({"contact": user_contact}):
         # Registration
-        first_name = st.text_input("First Name")
-        last_name = st.text_input("Last Name")
-        age = st.number_input("Age", min_value=1, max_value=120)
-        location = st.text_input("Location")
-        if st.button("Register"):
+        first_name = st.text_input("First Name", key="user_first_name")
+        last_name = st.text_input("Last Name", key="user_last_name")
+        age = st.number_input("Age", min_value=1, max_value=120, key="user_age")
+        location = st.text_input("Location", key="user_location")
+        if st.button("Register", key="user_register"):
             db.users.insert_one({
                 "contact": user_contact, "first_name": first_name,
                 "last_name": last_name, "age": age, "location": location
@@ -128,17 +128,18 @@ def user_dashboard(user_contact):
     st.subheader("Products")
     products = list(db.products.find())
     cart, wishlist = [], []
-    for p in products:
+    for idx, p in enumerate(products):
+        pname_key = p['name'].replace(" ", "_")
         st.write(
             f"{p['name']} | Price: ₹{p['price']} | Remaining: {p['remaining_qty']}"
         )
-        if st.button(f"Add {p['name']} to Cart"):
+        if st.button(f"Add {p['name']} to Cart", key=f"cart_{pname_key}_{idx}"):
             cart.append(p["name"])
-        if st.button(f"Add {p['name']} to Wishlist"):
+        if st.button(f"Add {p['name']} to Wishlist", key=f"wishlist_{pname_key}_{idx}"):
             wishlist.append(p["name"])
-        rating = st.slider(f"Rate {p['name']}", 1, 5, 3)
-        feedback = st.text_input(f"Feedback for {p['name']}")
-        if st.button(f"Submit Feedback for {p['name']}"):
+        rating = st.slider(f"Rate {p['name']}", 1, 5, 3, key=f"rate_{pname_key}_{idx}")
+        feedback = st.text_input(f"Feedback for {p['name']}", key=f"feed_{pname_key}_{idx}")
+        if st.button(f"Submit Feedback for {p['name']}", key=f"feedback_{pname_key}_{idx}"):
             db.feedback.insert_one({
                 "user": user_contact,
                 "product": p["name"],
@@ -150,7 +151,7 @@ def user_dashboard(user_contact):
             st.success("Feedback submitted.")
 
         # Discount highlight
-        if p["daily_sale"] == 0:
+        if p.get("daily_sale", 0) == 0:
             st.info(f"Discount available on {p['name']}!")
 
     # Cart and Wishlist display
@@ -160,7 +161,7 @@ def user_dashboard(user_contact):
     st.write(wishlist)
 
     # Invoice
-    if st.button("Place Order"):
+    if st.button("Place Order", key="user_place_order"):
         order_id = db.orders.insert_one({
             "user": user_contact,
             "cart": cart,
